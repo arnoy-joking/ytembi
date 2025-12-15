@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniPlayer for YouTube</title>
+    <style>
+        :root {
+            --primary: #ff0000;
+            --bg: #f9f9f9;
+            --surface: #ffffff;
+            --text: #333333;
+            --border: #e0e0e0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius: 12px;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f0f0f;
+            --surface: #1e1e1e;
+            --text: #f0f0f0;
+            --border: #333333;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        body { margin: 0; padding: 0; font-family: var(--font); background: var(--bg); color: var(--text); transition: background 0.3s, color 0.3s; }
+        
+        /* Layout */
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 1fr 300px; gap: 20px; min-height: 100vh; }
+        
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        /* Header */
+        header { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
+        h1 span { color: var(--primary); }
+        
+        .theme-toggle { background: none; border: none; cursor: pointer; font-size: 1.5rem; color: var(--text); padding: 5px; border-radius: 50%; transition: background 0.2s; }
+        .theme-toggle:hover { background: var(--border); }
+
+        /* Main Player Section */
+        .player-section { display: flex; flex-direction: column; gap: 20px; }
+        
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            background: #000;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border: none;
+        }
+
+        .video-placeholder {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #666; text-align: center; padding: 20px;
+        }
+        .video-placeholder svg { width: 64px; height: 64px; margin-bottom: 15px; opacity: 0.5; }
+
+        /* Input Area */
+        .input-group { display: flex; gap: 10px; background: var(--surface); padding: 15px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .url-input { flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 1rem; }
+        .url-input:focus { border-color: var(--primary); }
+        
+        .btn { padding: 0 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-secondary { background: var(--border); color: var(--text); }
+        .btn-secondary:hover { filter: brightness(0.9); }
+
+        /* Sidebar / Settings */
+        .sidebar { display: flex; flex-direction: column; gap: 20px; }
+        
+        .panel { background: var(--surface); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+        .panel h3 { margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .setting-item { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+        .setting-item.full-width { grid-column: 1 / -1; flex-direction: column; align-items: flex-start; }
+        .setting-item label { cursor: pointer; user-select: none; flex: 1; }
+        
+        /* Form Elements */
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+        input[type="number"], select { padding: 8px; width: 100%; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+        
+        .range-inputs { display: flex; gap: 10px; width: 100%; }
+        .range-inputs div { flex: 1; }
+        .range-inputs span { font-size: 0.75rem; color: #888; display: block; margin-bottom: 4px; }
+
+        /* History List */
+        .history-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+        .history-item { padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; gap: 10px; align-items: center; transition: background 0.2s; }
+        .history-item:last-child { border-bottom: none; }
+        .history-item:hover { background: var(--bg); }
+        .history-thumb { width: 60px; height: 45px; background: #000; object-fit: cover; border-radius: 4px; }
+        .history-info { flex: 1; overflow: hidden; }
+        .history-title { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+        .history-id { font-size: 0.75rem; color: #888; }
+        .history-del { color: #ff4444; cursor: pointer; padding: 5px; font-size: 1.2rem; }
+
+        /* Utility */
+        .tools-row { display: flex; gap: 10px; margin-top: 15px; }
+        .code-block { background: var(--bg); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; margin-top: 10px; word-break: break-all; border: 1px solid var(--border); display: none; }
+        .code-block.visible { display: block; }
+        
+        /* Toast */
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 1000; }
+        .toast.show { opacity: 1; bottom: 40px; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1><span>▶</span> OmniPlayer</h1>
+        <button class="theme-toggle" id="themeBtn" title="Toggle Dark Mode">🌙</button>
+    </header>
+
+    <main class="player-section">
+        <div class="video-wrapper" id="videoWrapper">
+            <div class="video-placeholder" id="placeholder">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 15l5.19-3L10 9v6m11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>
+                <h3>Ready to Play</h3>
+                <p>Paste a YouTube link or ID below to begin.</p>
+            </div>
+            </div>
+
+        <div class="input-group">
+            <input type="text" id="urlInput" class="url-input" placeholder="Paste YouTube Link (e.g., youtube.com/watch?v=...) or ID">
+            <button class="btn btn-primary" id="loadBtn">Load Video</button>
+        </div>
+        
+        <div class="panel">
+             <h3>Generated Embed Code</h3>
+             <button class="btn btn-secondary" style="width:100%" onclick="copyEmbedCode()">📋 Copy Iframe Code</button>
+             <div class="code-block" id="embedCodeDisplay"></div>
+        </div>
+    </main>
+
+    <aside class="sidebar">
+        <div class="panel">
+            <h3>Player Settings <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.7rem;" id="resetSettings">Reset</button></h3>
+            <div class="settings-grid">
+                <div class="setting-item"><input type="checkbox" id="autoplay"><label for="autoplay">Autoplay</label></div>
+                <div class="setting-item"><input type="checkbox" id="mute"><label for="mute">Mute Start</label></div>
+                <div class="setting-item"><input type="checkbox" id="loop"><label for="loop">Loop Video</label></div>
+                <div class="setting-item"><input type="checkbox" id="controls" checked><label for="controls">Show Controls</label></div>
+                <div class="setting-item"><input type="checkbox" id="keyboard" checked><label for="keyboard">Keyboard Nav</label></div>
+                <div class="setting-item"><input type="checkbox" id="fullscreen" checked><label for="fullscreen">Allow Fullscreen</label></div>
+                <div class="setting-item"><input type="checkbox" id="modest"><label for="modest">Modest Branding</label></div>
+                <div class="setting-item"><input type="checkbox" id="related"><label for="related">Show Related</label></div>
+                
+                <div class="setting-item full-width">
+                    <label>Start / End (Seconds)</label>
+                    <div class="range-inputs">
+                        <div><span>Start</span><input type="number" id="start" min="0" placeholder="0"></div>
+                        <div><span>End</span><input type="number" id="end" min="0" placeholder="Auto"></div>
+                    </div>
+                </div>
+
+                <div class="setting-item full-width">
+                    <label>Interface Language (ISO Code)</label>
+                    <input type="text" id="lang" placeholder="e.g., en, es, ja" maxlength="2">
+                </div>
+            </div>
+            
+            <div class="tools-row">
+                <button class="btn btn-primary" style="width:100%" id="applySettings">Apply Settings</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>History <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.7rem;" onclick="clearHistory()">Clear</button></h3>
+            <ul class="history-list" id="historyList">
+                <li style="padding:10px; color:#888; text-align:center;">No history yet.</li>
+            </ul>
+        </div>
+    </aside>
+</div>
+
+<div class="toast" id="toast">Message</div>
+
+<script>
+    // --- State Management ---
+    const state = {
+        currentId: '',
+        history: JSON.parse(localStorage.getItem('yt_omni_history')) || []
+    };
+
+    // --- DOM Elements ---
+    const els = {
+        urlInput: document.getElementById('urlInput'),
+        loadBtn: document.getElementById('loadBtn'),
+        wrapper: document.getElementById('videoWrapper'),
+        placeholder: document.getElementById('placeholder'),
+        historyList: document.getElementById('historyList'),
+        themeBtn: document.getElementById('themeBtn'),
+        applyBtn: document.getElementById('applySettings'),
+        resetBtn: document.getElementById('resetSettings'),
+        embedDisplay: document.getElementById('embedCodeDisplay'),
+        settings: {
+            autoplay: document.getElementById('autoplay'),
+            mute: document.getElementById('mute'),
+            loop: document.getElementById('loop'),
+            controls: document.getElementById('controls'),
+            keyboard: document.getElementById('keyboard'),
+            fullscreen: document.getElementById('fullscreen'),
+            modest: document.getElementById('modest'),
+            related: document.getElementById('related'),
+            start: document.getElementById('start'),
+            end: document.getElementById('end'),
+            lang: document.getElementById('lang'),
+        }
+    };
+
+    // --- Core Logic ---
+
+    /**
+     * Extracts YouTube Video ID from various URL formats
+     */
+    function extractVideoId(input) {
+        if (!input) return null;
+        // Regex handles: standard v=, short youtu.be, embed/, shorts/
+        const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i;
+        const match = input.match(regex);
+        // If it looks like a raw ID (11 chars), return it, otherwise return regex match
+        if (!match && input.length === 11) return input;
+        return match ? match[1] : null;
+    }
+
+    /**
+     * Builds the iframe URL based on settings
+     */
+    function buildEmbedUrl(id) {
+        const s = els.settings;
+        const params = new URLSearchParams();
+
+        // Core logic
+        params.set('enablejsapi', '1');
+        params.set('rel', s.related.checked ? '1' : '0');
+        params.set('controls', s.controls.checked ? '1' : '0');
+        params.set('disablekb', s.keyboard.checked ? '0' : '1'); // disablekb: 1 means disabled
+        params.set('fs', s.fullscreen.checked ? '1' : '0');
+        params.set('modestbranding', s.modest.checked ? '1' : '0');
+        
+        // Autoplay logic (Modern browsers require Mute for Autoplay usually)
+        if (s.autoplay.checked) {
+            params.set('autoplay', '1');
+            if (s.mute.checked) params.set('mute', '1'); // Force mute if user wants safety
+        }
+        if (s.mute.checked) params.set('mute', '1');
+
+        // Loop logic: YouTube requires 'playlist' param set to video ID for single video loop
+        if (s.loop.checked) {
+            params.set('loop', '1');
+            params.set('playlist', id);
+        }
+
+        // Timing
+        if (s.start.value) params.set('start', s.start.value);
+        if (s.end.value) params.set('end', s.end.value);
+
+        // Language
+        if (s.lang.value) {
+            params.set('hl', s.lang.value);
+            params.set('cc_load_policy', '1');
+        }
+
+        return `https://www.youtube.com/embed/${id}?${params.toString()}`;
+    }
+
+    /**
+     * Loads the player
+     */
+    function loadVideo() {
+        const rawInput = els.urlInput.value.trim();
+        const id = extractVideoId(rawInput);
+
+        if (!id) {
+            showToast('Invalid YouTube URL or ID');
+            return;
+        }
+
+        state.currentId = id;
+        const src = buildEmbedUrl(id);
+        
+        // Update DOM
+        els.placeholder.style.display = 'none';
+        
+        // Remove existing iframe if any
+        const existingIframe = els.wrapper.querySelector('iframe');
+        if (existingIframe) existingIframe.remove();
+
+        const iframe = document.createElement('iframe');
+        iframe.src = src;
+        iframe.title = "YouTube video player";
+        iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+        if (els.settings.fullscreen.checked) iframe.setAttribute('allowfullscreen', '');
+        
+        els.wrapper.appendChild(iframe);
+        
+        addToHistory(id);
+        updateEmbedCodeDisplay(src);
+    }
+
+    // --- History Management ---
+
+    function addToHistory(id) {
+        // Remove duplicates (move to top)
+        state.history = state.history.filter(item => item.id !== id);
+        
+        const newItem = {
+            id: id,
+            timestamp: Date.now()
+        };
+        
+        state.history.unshift(newItem);
+        // Limit history to 20 items
+        if (state.history.length > 20) state.history.pop();
+        
+        saveHistory();
+        renderHistory();
+    }
+
+    function removeHistoryItem(e, id) {
+        e.stopPropagation();
+        state.history = state.history.filter(item => item.id !== id);
+        saveHistory();
+        renderHistory();
+    }
+
+    function saveHistory() {
+        localStorage.setItem('yt_omni_history', JSON.stringify(state.history));
+    }
+
+    function clearHistory() {
+        state.history = [];
+        saveHistory();
+        renderHistory();
+        showToast('History cleared');
+    }
+
+    function renderHistory() {
+        els.historyList.innerHTML = '';
+        if (state.history.length === 0) {
+            els.historyList.innerHTML = '<li style="padding:10px; color:#888; text-align:center;">No history yet.</li>';
+            return;
+        }
+
+        state.history.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            li.onclick = () => {
+                els.urlInput.value = `https://youtu.be/${item.id}`;
+                loadVideo();
+            };
+
+            li.innerHTML = `
+                <img src="https://img.youtube.com/vi/${item.id}/default.jpg" class="history-thumb" alt="thumb">
+                <div class="history-info">
+                    <div class="history-title">Video ID: ${item.id}</div>
+                    <div class="history-id">${new Date(item.timestamp).toLocaleDateString()}</div>
+                </div>
+                <div class="history-del" onclick="removeHistoryItem(event, '${item.id}')">&times;</div>
+            `;
+            els.historyList.appendChild(li);
+        });
+    }
+
+    // --- Utility Functions ---
+
+    function updateEmbedCodeDisplay(src) {
+        const code = `<iframe width="560" height="315" src="${src}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        els.embedDisplay.textContent = code;
+        els.embedDisplay.classList.add('visible');
+    }
+
+    function copyEmbedCode() {
+        const text = els.embedDisplay.textContent;
+        if (!text) {
+            showToast('Load a video first!');
+            return;
+        }
+        navigator.clipboard.writeText(text).then(() => showToast('Embed code copied!'));
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function resetSettings() {
+        // Defaults
+        els.settings.autoplay.checked = false;
+        els.settings.mute.checked = false;
+        els.settings.loop.checked = false;
+        els.settings.controls.checked = true;
+        els.settings.keyboard.checked = true;
+        els.settings.fullscreen.checked = true;
+        els.settings.modest.checked = false;
+        els.settings.related.checked = false;
+        els.settings.start.value = '';
+        els.settings.end.value = '';
+        els.settings.lang.value = '';
+        
+        if (state.currentId) loadVideo();
+        showToast('Settings reset');
+    }
+
+    // --- Theme Handling ---
+    let isDark = false;
+    els.themeBtn.addEventListener('click', () => {
+        isDark = !isDark;
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        els.themeBtn.textContent = isDark ? '☀️' : '🌙';
+    });
+
+    // --- Event Listeners ---
+    els.loadBtn.addEventListener('click', loadVideo);
+    
+    // Allow Enter key in input
+    els.urlInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') loadVideo();
+    });
+
+    // Apply Settings Button (reloads video with new params)
+    els.applyBtn.addEventListener('click', () => {
+        if (state.currentId) {
+            loadVideo();
+            showToast('Settings applied & Video Reloaded');
+        } else {
+            showToast('Load a video first');
+        }
+    });
+
+    els.resetBtn.addEventListener('click', resetSettings);
+
+    // Initial Load
+    renderHistory();
+
+</script>
+</body>
+</html>
