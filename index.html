@@ -1,123 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" type="image/png" href="https://png.pngtree.com/png-vector/20250601/ourlarge/pngtree-red-live-streaming-icon---modern-design-for-broadcasts-vector-png-image_16392661.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live</title>
+    <title>OmniPlayer Ultimate v7.3</title>
+    <link rel="icon" type="image/png" href="https://png.pngtree.com/png-vector/20250601/ourlarge/pngtree-red-live-streaming-icon---modern-design-for-broadcasts-vector-png-image_16392661.png">
+    
     <style>
         :root {
             --primary: #ff0033;
             --bg: #0a0a0c;
             --surface: #16161a;
             --text: #ffffff;
-            --text-dim: #9494a5;
             --border: #2d2d3a;
-            --radius: 16px;
         }
 
-        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; height: 100vh; overflow: hidden; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
 
-        /* --- গ্রিড লেআউট লজিক --- */
+        /* লেআউট লজিক */
         .app {
             display: grid;
-            grid-template-columns: 1fr 380px; /* ডিফল্ট: প্লেয়ার + সাইডবার */
+            grid-template-columns: 1fr 350px;
             grid-template-rows: 64px 1fr;
             height: 100vh;
-            transition: all 0.3s ease-in-out;
-        }
-
-        /* থিয়েটার মোড একটিভ হলে সাইডবার কলাম ০ করে দেওয়া হবে */
-        body.theatre-mode .app {
-            grid-template-columns: 1fr;
-        }
-
-        header {
-            grid-column: 1 / -1;
-            background: rgba(10, 10, 12, 0.9);
-            border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 24px; z-index: 100; backdrop-filter: blur(10px);
-        }
-
-        .stage {
-            grid-column: 1; grid-row: 2;
-            padding: 20px; display: flex; flex-direction: column; 
-            align-items: center; overflow-y: auto;
-        }
-
-        .video-container {
-            width: 100%; 
-            max-width: 1000px; /* সাধারণ মোডে সাইজ */
-            aspect-ratio: 16/9; background: #000;
-            border-radius: var(--radius);
-            overflow: hidden; position: relative;
-            transition: max-width 0.4s ease;
-        }
-
-        /* থিয়েটার মোডে ভিডিও কন্টেইনার বড় হবে */
-        body.theatre-mode .video-container {
-            max-width: 1400px;
-        }
-
-        #player { width: 100%; height: 100%; }
-
-        /* সাইডবার হাইড লজিক */
-        .sidebar {
-            grid-column: 2; grid-row: 2; background: var(--surface);
-            border-left: 1px solid var(--border); display: flex; flex-direction: column;
             transition: 0.3s;
         }
 
-        body.theatre-mode .sidebar {
-            display: none; /* থিয়েটার মোডে সাইডবার থাকবে না */
+        body.theatre-mode .app { grid-template-columns: 1fr; }
+
+        header {
+            grid-column: 1 / -1;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; z-index: 1000;
         }
 
-        .live-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 999; display: none; cursor: not-allowed;
+        .logo-box { display: flex; align-items: center; gap: 10px; font-weight: bold; }
+        .logo-box img { height: 32px; width: 32px; object-fit: contain; }
+
+        .stage { grid-row: 2; padding: 20px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
+
+        .video-box {
+            width: 100%; max-width: 1100px; aspect-ratio: 16/9;
+            background: #000; border-radius: 12px; overflow: hidden; position: relative;
         }
-        body.live-active .live-overlay { display: block; }
+        #player { width: 100%; height: 100%; }
+
+        /* লাইভ মোড লকডাউন লেয়ার */
+        .live-lock {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 9999; display: none; background: rgba(0,0,0,0); cursor: not-allowed;
+        }
+        body.live-active .live-lock { display: block; }
+        
+        .live-tag {
+            position: absolute; top: 15px; left: 15px; background: var(--primary);
+            color: white; padding: 5px 12px; border-radius: 4px; font-weight: 900; font-size: 12px;
+            animation: blink 1s infinite; pointer-events: none;
+        }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .sidebar { background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; }
+        body.theatre-mode .sidebar { display: none; }
 
         .btn {
-            background: var(--surface); color: var(--text); border: 1px solid var(--border);
-            padding: 8px 16px; border-radius: 8px; cursor: pointer;
+            background: #25252b; color: white; border: 1px solid var(--border);
+            padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: 0.2s;
         }
+        .btn-primary { background: var(--primary); border: none; font-weight: bold; }
 
         .toast {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            background: white; color: black; padding: 10px 20px; border-radius: 20px;
-            opacity: 0; transition: 0.3s; z-index: 2000; pointer-events: none;
+            background: white; color: black; padding: 10px 25px; border-radius: 30px;
+            font-weight: bold; opacity: 0; transition: 0.3s; z-index: 10000;
         }
-        .toast.show { opacity: 1; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
     </style>
 </head>
 <body>
 
 <div class="app">
     <header>
-        <div style="font-weight: bold;">OmniPlayer <span>v7.2</span></div>
+        <div class="logo-box">
+            <img src="https://png.pngtree.com/png-vector/20250601/ourlarge/pngtree-red-live-streaming-icon---modern-design-for-broadcasts-vector-png-image_16392661.png" alt="Logo">
+            OmniPlayer Live
+        </div>
         <div style="display:flex; gap:10px;">
-            <button class="btn" id="liveToggleBtn">Live Mode</button>
-            <button class="btn" id="theatreBtn">Theatre Mode [T]</button>
+            <button class="btn" id="liveBtn" style="border-color:var(--primary)">Live Mode</button>
+            <button class="btn" id="theatreBtn">Theatre [T]</button>
         </div>
     </header>
 
     <main class="stage">
-        <div class="video-container">
+        <div class="video-box">
             <div id="player"></div>
-            <div class="live-overlay"></div>
+            <div class="live-lock" id="lockLayer">
+                <div class="live-tag">● LIVE LOCKDOWN</div>
+            </div>
         </div>
-        <div style="margin-top:20px; display:flex; gap:10px; width:100%; max-width:600px;">
-            <input type="text" id="urlInput" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:white;" placeholder="Enter Video ID...">
-            <button class="btn" id="playBtn" style="background:var(--primary); border:none;">Play</button>
+        
+        <div style="margin-top:25px; display:flex; gap:10px; width:100%; max-width:600px;">
+            <input type="text" id="urlInput" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--border); background:#1a1a1f; color:white;" placeholder="YouTube Video ID or URL">
+            <button class="btn btn-primary" id="playBtn">PLAY</button>
         </div>
     </main>
 
     <aside class="sidebar">
         <div style="padding:20px;">
-            <h3>History</h3>
-            <ul id="historyList" style="list-style:none; padding:0;"></ul>
+            <h3 style="font-size:0.8rem; color:#888;">WATCH HISTORY</h3>
+            <ul id="historyList" style="list-style:none; padding:0; margin:0;"></ul>
         </div>
     </aside>
 </div>
@@ -126,89 +118,114 @@
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    let db = JSON.parse(localStorage.getItem('omni_v7_data')) || { history: {}, liveMode: false, liveVideoId: null };
     let player = null;
-    let currentId = null;
-
+    let db = JSON.parse(localStorage.getItem('omni_v7_store')) || { history: {}, live: false, vid: null };
+    
+    // API লোড হলে অটোমেটিক কল হবে
     function onYouTubeIframeAPIReady() {
-        if (db.liveMode && db.liveVideoId) {
-            toggleLiveUI(true);
-            loadVideo(db.liveVideoId);
+        if (db.live && db.vid) {
+            setLiveUI(true);
+            initPlayer(db.vid);
+        } else if (Object.keys(db.history).length > 0) {
+            const last = Object.values(db.history).sort((a,b)=>b.ts-a.ts)[0];
+            initPlayer(last.id);
         }
+        renderHistory();
     }
 
-    function loadVideo(id) {
-        currentId = id;
-        if(player) player.destroy();
+    function initPlayer(id) {
+        if (!id) return;
+        if (player) player.destroy();
+
+        let startAt = (db.history[id]) ? db.history[id].time : 0;
+
         player = new YT.Player('player', {
             videoId: id,
-            playerVars: { 'autoplay': 1, 'controls': db.liveMode ? 0 : 1 },
+            playerVars: {
+                'autoplay': 1,
+                'controls': db.live ? 0 : 1,
+                'start': Math.floor(startAt),
+                'rel': 0
+            },
             events: {
-                'onStateChange': (e) => { if(e.data === 0 && db.liveMode) exitLive(); }
+                'onReady': () => { startSync(id); },
+                'onStateChange': (e) => {
+                    if (e.data === YT.PlayerState.ENDED && db.live) endLive();
+                }
             }
         });
+        db.vid = id;
+        save();
     }
 
-    // --- Theatre Mode Logic ---
-    const theatreBtn = document.getElementById('theatreBtn');
-    function toggleTheatre() {
-        document.body.classList.toggle('theatre-mode');
-        const isActive = document.body.classList.contains('theatre-mode');
-        theatreBtn.innerText = isActive ? "Exit Theatre [T]" : "Theatre Mode [T]";
-        showToast(isActive ? "Theatre Mode Enabled" : "Theatre Mode Disabled");
+    function startSync(id) {
+        setInterval(() => {
+            if (player && player.getCurrentTime) {
+                db.history[id] = { id, time: player.getCurrentTime(), ts: Date.now() };
+                save();
+            }
+        }, 3000);
     }
 
-    theatreBtn.onclick = toggleTheatre;
+    // লাইভ মোড লজিক
+    document.getElementById('liveBtn').onclick = () => {
+        if (!db.vid) return notify("Play a video first!");
+        if (db.live) return notify("Already in Live Mode");
+        
+        if (confirm("Live Mode: All controls will be blocked until the end. Continue?")) {
+            db.live = true;
+            save();
+            setLiveUI(true);
+            initPlayer(db.vid);
+        }
+    };
 
-    // --- Keyboard Shortcuts ---
+    function endLive() {
+        db.live = false;
+        save();
+        setLiveUI(false);
+        initPlayer(db.vid);
+        notify("Class Completed! Controls restored.");
+    }
+
+    function setLiveUI(active) {
+        document.body.classList.toggle('live-active', active);
+        document.getElementById('liveBtn').style.background = active ? "var(--primary)" : "";
+    }
+
+    // কীবোর্ড লকডাউন (Live Mode)
     document.addEventListener('keydown', (e) => {
-        // লাইভ মোডে কীবোর্ড ব্লক
-        if (db.liveMode) {
-            const blocked = [' ', 'arrowleft', 'arrowright', 'j', 'k', 'l', 'f'];
-            if (blocked.includes(e.key.toLowerCase())) {
+        if (db.live) {
+            const keys = [' ', 'arrowleft', 'arrowright', 'j', 'k', 'l', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            if (keys.includes(e.key.toLowerCase())) {
                 e.preventDefault();
-                showToast("Controls locked in Live Mode");
-                return;
+                notify("Keys Locked in Live Mode");
             }
         }
-        
-        // থিয়েটার মোড শর্টকাট
         if (e.key.toLowerCase() === 't' && e.target.tagName !== 'INPUT') {
-            toggleTheatre();
+            document.body.classList.toggle('theatre-mode');
         }
     }, true);
 
-    // --- Live Mode Logic ---
-    function exitLive() {
-        db.liveMode = false;
-        db.liveVideoId = null;
-        localStorage.setItem('omni_v7_data', JSON.stringify(db));
-        toggleLiveUI(false);
-        loadVideo(currentId);
-    }
-
-    function toggleLiveUI(active) {
-        document.body.classList.toggle('live-active', active);
-    }
-
-    document.getElementById('liveToggleBtn').onclick = () => {
-        if(!currentId) return;
-        db.liveMode = true;
-        db.liveVideoId = currentId;
-        localStorage.setItem('omni_v7_data', JSON.stringify(db));
-        toggleLiveUI(true);
-        loadVideo(currentId);
-    };
-
     document.getElementById('playBtn').onclick = () => {
-        const val = document.getElementById('urlInput').value;
-        if(val) loadVideo(val);
+        const input = document.getElementById('urlInput').value;
+        const id = input.match(/(?:v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/|^)([a-zA-Z0-9_-]{11})/)?.[1];
+        if (id) initPlayer(id);
+        else notify("Invalid ID");
     };
 
-    function showToast(m) {
-        const t = document.getElementById('toast');
-        t.innerText = m; t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 2000);
+    document.getElementById('theatreBtn').onclick = () => document.body.classList.toggle('theatre-mode');
+
+    function save() { localStorage.setItem('omni_v7_store', JSON.stringify(db)); }
+    function notify(m) { const t=document.getElementById('toast'); t.innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+
+    function renderHistory() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = Object.values(db.history).map(i => `
+            <li onclick="initPlayer('${i.id}')" style="padding:10px; border-bottom:1px solid #222; cursor:pointer; font-size:13px;">
+                Video ID: ${i.id} <br> <span style="color:#666">Saved: ${Math.floor(i.time)}s</span>
+            </li>
+        `).join('');
     }
 </script>
 </body>
