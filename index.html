@@ -3,604 +3,333 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniPlayer Ultimate v7.1 - Fixed Live Mode</title>
+    <title>OmniPlayer Pro: Bulletproof Edition</title>
     <style>
         :root {
             --primary: #ff0033;
-            --primary-hover: #d6002b;
-            --bg: #0f0f12;
-            --surface: #1a1a1f;
-            --surface-hover: #25252b;
+            --bg: #050505;
+            --surface: #111114;
             --text: #ffffff;
-            --text-dim: #888899;
-            --border: #2a2a35;
-            --radius: 14px;
-            --font: 'Segoe UI', system-ui, sans-serif;
-            --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+            --text-dim: #707080;
+            --border: #222228;
+            --radius: 12px;
         }
-        * { box-sizing: border-box; outline: none; user-select: none; }
-        body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); height: 100vh; overflow: hidden; }
-        body.live-mode { user-select: none !important; }
-        body.live-mode .app > *:not(.stage), body.live-mode .controls, body.live-mode .sidebar, body.live-mode header { display: none !important; }
 
-        .app {
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            margin: 0; background: var(--bg); color: var(--text); 
+            font-family: 'Inter', system-ui, sans-serif; height: 100vh; overflow: hidden; 
+        }
+
+        .app-container {
             display: grid;
-            grid-template-columns: 1fr 350px;
+            grid-template-columns: 1fr 340px;
             grid-template-rows: 60px 1fr;
             height: 100%;
-            transition: all 0.5s var(--ease);
         }
+
         header {
             grid-column: 1 / -1;
-            background: rgba(15, 15, 18, 0.95);
+            background: #000;
             border-bottom: 1px solid var(--border);
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 20px; z-index: 50;
-            backdrop-filter: blur(10px);
+            padding: 0 20px; z-index: 100;
         }
-        .logo { font-weight: 800; font-size: 1.2rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
-        .logo span { color: var(--primary); }
 
-        .header-buttons { display: flex; gap: 10px; align-items: center; }
-        .btn-small {
-            background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
-            padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: 0.2s;
-        }
-        .btn-small:hover { color: var(--text); border-color: var(--text); }
-        .btn-small.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .logo { font-weight: 900; color: var(--primary); letter-spacing: -1px; }
 
-        body.theatre-mode .app { grid-template-columns: 1fr 0px; }
-        body.theatre-mode .sidebar { opacity: 0; pointer-events: none; }
-
+        /* Stage */
         .stage {
-            grid-column: 1; grid-row: 2;
-            padding: 30px;
+            grid-column: 1; padding: 20px;
             display: flex; flex-direction: column; align-items: center;
-            overflow-y: auto;
+            overflow-y: auto; position: relative;
         }
-        .video-box {
-            width: 100%; max-width: 1100px;
-            aspect-ratio: 16/9;
-            background: #000;
-            border-radius: var(--radius);
-            box-shadow: 0 20px 50px -10px rgba(0,0,0,0.5);
+
+        .video-wrapper {
+            width: 100%; max-width: 1000px;
+            aspect-ratio: 16/9; background: #000;
+            border-radius: var(--radius); position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
             overflow: hidden;
-            position: relative;
-        }
-        #player { width: 100%; height: 100%; }
-
-        /* Live Mode Fullscreen Layout */
-        body.live-mode .stage {
-            padding: 0;
-        }
-        body.live-mode .video-box {
-            max-width: none;
-            height: 100vh;
-            width: 100vw;
-            border-radius: 0;
         }
 
-        .controls {
-            margin-top: 25px;
-            width: 100%; max-width: 700px;
-            display: flex; gap: 10px;
-            position: relative;
+        #player { width: 100%; height: 100%; pointer-events: auto; }
+
+        /* The Ultimate Blocker */
+        .strict-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 9999; display: none; background: rgba(0,0,0,0);
         }
-        .url-input {
+        body.live-active .strict-overlay { display: block; cursor: lock; }
+
+        .live-banner {
+            position: absolute; top: 15px; left: 15px; z-index: 10000;
+            background: var(--primary); color: white; padding: 6px 12px;
+            border-radius: 4px; font-weight: bold; font-size: 12px;
+            display: none; animation: flash 1.5s infinite;
+        }
+        body.live-active .live-banner { display: block; }
+        @keyframes flash { 50% { opacity: 0.5; } }
+
+        .focus-warning {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,0,51,0.9); z-index: 20000;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; backdrop-filter: blur(10px);
+        }
+
+        /* Controls */
+        .ui-panel {
+            width: 100%; max-width: 600px; margin-top: 25px;
+            transition: 0.3s;
+        }
+        body.live-active .ui-panel { opacity: 0; pointer-events: none; }
+
+        .input-row { display: flex; gap: 10px; }
+        input {
             flex: 1; background: var(--surface); border: 1px solid var(--border);
-            color: var(--text); padding: 14px 20px; border-radius: 12px;
-            font-size: 0.95rem; transition: 0.2s;
+            color: white; padding: 12px; border-radius: 8px;
         }
-        .btn-main {
+        button {
             background: var(--primary); color: white; border: none;
-            padding: 0 25px; border-radius: 12px; font-weight: 600; cursor: pointer;
-            transition: 0.2s; white-space: nowrap;
+            padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;
         }
-        .btn-main:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        button:disabled { background: #333; cursor: not-allowed; }
 
-        .status-txt { margin-top: 10px; color: var(--text-dim); font-size: 0.85rem; }
-
-        /* Live Mode Overlay */
-        .live-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 2rem;
-            font-weight: bold;
-            text-align: center;
-            z-index: 100;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-        .live-overlay.visible { opacity: 1; }
-        .live-overlay .pulse {
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
-        .live-overlay .info {
-            font-size: 1rem;
-            margin-top: 20px;
-            color: #ffaaaa;
-        }
-
+        /* Sidebar */
         .sidebar {
-            grid-column: 2; grid-row: 2;
-            background: var(--surface);
-            border-left: 1px solid var(--border);
-            display: flex; flex-direction: column;
-            overflow: hidden; transition: all 0.5s var(--ease);
+            background: var(--surface); border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; transition: 0.3s;
         }
-        .panel { padding: 20px; border-bottom: 1px solid var(--border); }
-        .panel h3 { margin: 0 0 15px 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+        body.live-active .sidebar { filter: blur(5px); pointer-events: none; opacity: 0.5; }
 
-        .toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .toggle {
-            display: flex; align-items: center; gap: 8px; cursor: pointer;
-            font-size: 0.85rem; color: var(--text-dim);
+        .hist-item {
+            padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer;
+            display: flex; gap: 10px; font-size: 13px;
         }
-        .toggle:hover { color: var(--text); }
-        .toggle input { accent-color: var(--primary); width: 16px; height: 16px; margin: 0; }
-
-        .speed-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-        .speed-btn {
-            background: var(--surface-hover); padding: 6px 10px; border-radius: 6px;
-            font-size: 0.8rem; cursor: pointer; min-width: 40px; text-align: center;
-        }
-        .speed-btn.active { background: var(--primary); color: white; }
-
-        .override-input {
-            width: 100%; background: var(--bg); border: 1px solid var(--border);
-            color: var(--text); padding: 8px; border-radius: 6px; margin-top: 12px;
-        }
-        .btn-apply {
-            width: 100%; margin-top: 15px; padding: 10px;
-            background: var(--surface-hover); border: 1px solid var(--border);
-            color: var(--text); border-radius: 8px; cursor: pointer; font-weight: 600;
-            transition: 0.2s;
-        }
-        .btn-apply:hover { background: var(--border); color: white; }
-
-        .history-wrapper { flex: 1; overflow-y: auto; position: relative; }
-        .history-list { list-style: none; padding: 0; margin: 0; }
-        .history-search {
-            width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border);
-            color: var(--text); border-radius: 6px; margin-bottom: 10px;
-        }
-        .history-item {
-            display: flex; gap: 12px; padding: 12px 20px;
-            border-bottom: 1px solid var(--border);
-            cursor: pointer; transition: 0.2s; position: relative;
-        }
-        .history-item:hover { background: var(--surface-hover); }
-        .history-item.active { border-left: 3px solid var(--primary); background: rgba(255,0,51,0.05); }
-        .thumb {
-            width: 80px; height: 50px; border-radius: 6px; background: #000;
-            overflow: hidden; position: relative; flex-shrink: 0;
-        }
-        .thumb img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
-        .progress-bar {
-            position: absolute; bottom: 0; left: 0; height: 3px; background: rgba(255,255,255,0.2); width: 100%;
-        }
-        .no-progress .progress-bar { opacity: 0; }
-        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
-
-        .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-        .title { font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .meta { font-size: 0.75rem; color: var(--text-dim); margin-top: 4px; }
-
-        .del-btn {
-            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-            background: none; border: none; color: #ff4444; cursor: pointer;
-            opacity: 0; padding: 5px; transition: 0.2s;
-        }
-        .history-item:hover .del-btn { opacity: 1; }
+        .hist-item:hover { background: #1a1a1f; }
+        .hist-thumb { width: 80px; height: 45px; background: #000; border-radius: 4px; flex-shrink: 0; }
 
         .toast {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            background: var(--text); color: var(--bg); padding: 10px 20px;
-            border-radius: 30px; font-weight: 600; font-size: 0.9rem;
-            opacity: 0; pointer-events: none; transition: 0.3s; z-index: 100;
-        }
-        .toast.visible { opacity: 1; transform: translateX(-50%) translateY(-10px); }
-
-        @media (max-width: 900px) {
-            .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; overflow-y: auto; }
-            .stage { padding: 15px; grid-row: 2; }
-            .sidebar { grid-column: 1; grid-row: 3; border-left: none; border-top: 1px solid var(--border); }
-            body.theatre-mode .sidebar { display: none; }
+            position: fixed; bottom: 20px; left: 20px; background: white;
+            color: black; padding: 10px 20px; border-radius: 5px;
+            font-weight: bold; z-index: 100000; display: none;
         }
     </style>
 </head>
-<body>
-<div class="app">
+<body oncontextmenu="return false;">
+
+<div class="focus-warning" id="focusWarning">
+    <h1>FOCUS LOST!</h1>
+    <p>Live class is paused. Return to this tab to continue.</p>
+</div>
+
+<div class="app-container">
     <header>
-        <div class="logo"><span>◆</span> OmniPlayer v7.1</div>
-        <div class="header-buttons">
-            <button class="btn-small" id="pipBtn">PiP</button>
-            <button class="btn-small" id="liveModeBtn">Live Mode</button>
-            <button class="btn-small" id="theatreToggle">Theatre [T]</button>
+        <div class="logo">OMNIPLAYER PRO</div>
+        <div>
+            <button id="liveBtn" style="background: #222;">Enter Live Mode</button>
         </div>
     </header>
+
     <div class="stage">
-        <div class="video-box">
+        <div class="video-wrapper">
+            <div class="live-banner" id="liveBanner">STRICT LIVE MODE ACTIVE</div>
+            <div class="strict-overlay" id="blocker"></div>
             <div id="player"></div>
-            <div class="live-overlay" id="liveOverlay">
-                <div class="pulse">🔴 LIVE CLASS MODE</div>
-                <div class="info">All controls disabled • No skipping • Focus required</div>
+        </div>
+
+        <div class="ui-panel">
+            <div class="input-row">
+                <input type="text" id="urlInput" placeholder="Enter YouTube URL...">
+                <button id="loadBtn">LOAD</button>
             </div>
+            <p id="status" style="color: var(--text-dim); font-size: 12px; margin-top: 10px;">Waiting...</p>
         </div>
-        <div class="controls">
-            <input type="text" id="urlInput" class="url-input" placeholder="YouTube URL or ID (Ctrl+V)">
-            <button class="btn-main" id="playBtn">Play</button>
-        </div>
-        <div class="status-txt" id="status">Waiting for input...</div>
     </div>
+
     <aside class="sidebar">
-        <!-- Sidebar content same as before -->
-        <div class="panel">
-            <h3>Playback Settings</h3>
-            <div class="toggles">
-                <label class="toggle"><input type="checkbox" id="set-auto" checked> Autoplay</label>
-                <label class="toggle"><input type="checkbox" id="set-mute"> Mute Start</label>
-                <label class="toggle"><input type="checkbox" id="set-loop"> Loop</label>
-                <label class="toggle"><input type="checkbox" id="set-controls" checked> Show Controls</label>
-                <label class="toggle"><input type="checkbox" id="set-ui"> Clean UI</label>
-                <label class="toggle"><input type="checkbox" id="set-progress" checked> Always Show Progress</label>
-            </div>
-            <div>
-                <label style="font-size:0.8rem; color:var(--text-dim);">Playback Speed</label>
-                <div class="speed-buttons" id="speedButtons">
-                    <div class="speed-btn" data-speed="0.5">0.5x</div>
-                    <div class="speed-btn" data-speed="0.75">0.75x</div>
-                    <div class="speed-btn active" data-speed="1">1x</div>
-                    <div class="speed-btn" data-speed="1.25">1.25x</div>
-                    <div class="speed-btn" data-speed="1.5">1.5x</div>
-                    <div class="speed-btn" data-speed="2">2x</div>
-                </div>
-            </div>
-            <input type="number" id="set-start" class="override-input" placeholder="Force start time (seconds)...">
-            <button class="btn-apply" id="applySettingsBtn">Apply Changes & Reload</button>
-        </div>
-        <div class="panel" style="padding-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-            <h3>History</h3>
-            <span style="font-size:0.7rem; color:var(--text-dim); cursor:pointer;" onclick="clearHistory()">CLEAR ALL</span>
-        </div>
-        <div class="history-wrapper" id="historyWrapper">
-            <input type="text" class="history-search" id="historySearch" placeholder="Search history...">
-            <ul class="history-list" id="historyList"></ul>
-        </div>
+        <div style="padding: 20px; border-bottom: 1px solid var(--border); font-weight: bold;">HISTORY</div>
+        <div id="historyList" style="overflow-y: auto; flex: 1;"></div>
     </aside>
 </div>
-<div class="toast" id="toast"></div>
+
+<div id="toast" class="toast"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    const STATE_KEY = 'omni_ultimate_db_v7';
-    let player = null;
-    let saveTimer = null;
-    let isLiveMode = false;
-    let currentSpeed = 1;
+    /**
+     * OmniPlayer Pro - "Bulletproof" Logic
+     * বাংলা ব্যাখ্যা: 
+     * ১. হার্টবিট সেভ (১ সেকেন্ড অন্তর)
+     * ২. ট্যাব ফোকাস চেক (অন্য ট্যাবে গেলে পজ হবে)
+     * ৩. কিবোর্ড এবং মাউস হার্ড-লক
+     */
 
-    let db = JSON.parse(localStorage.getItem(STATE_KEY)) || { history: {}, liveMode: null };
+    let player;
+    let currentId = null;
+    let saveInterval;
     
-    const els = {
-        input: document.getElementById('urlInput'),
-        status: document.getElementById('status'),
-        list: document.getElementById('historyList'),
-        search: document.getElementById('historySearch'),
-        body: document.body,
-        theatreBtn: document.getElementById('theatreToggle'),
-        liveBtn: document.getElementById('liveModeBtn'),
-        pipBtn: document.getElementById('pipBtn'),
-        applyBtn: document.getElementById('applySettingsBtn'),
-        historyWrapper: document.getElementById('historyWrapper'),
-        liveOverlay: document.getElementById('liveOverlay'),
-        settings: {
-            auto: document.getElementById('set-auto'),
-            mute: document.getElementById('set-mute'),
-            loop: document.getElementById('set-loop'),
-            controls: document.getElementById('set-controls'),
-            ui: document.getElementById('set-ui'),
-            start: document.getElementById('set-start'),
-            progress: document.getElementById('set-progress'),
-        }
+    // DB Structure
+    let db = JSON.parse(localStorage.getItem('omni_v8_db')) || {
+        history: {},
+        activeLiveId: null,
+        isLive: false
     };
 
-    let currentId = db.liveMode ? db.liveMode.id : null;
+    function saveDb() { localStorage.setItem('omni_v8_db', JSON.stringify(db)); }
 
     function onYouTubeIframeAPIReady() {
-        showToast("OmniPlayer v7.1 Ready");
-        updateProgressVisibility();
-        renderHistory();
-        if (db.liveMode && db.liveMode.id) {
-            document.body.classList.add('live-mode');
-            els.liveOverlay.classList.add('visible');
-            isLiveMode = true;
-            initVideo(db.liveMode.id, true);
+        if (db.isLive && db.activeLiveId) {
+            currentId = db.activeLiveId;
+            startLiveSession(currentId);
         }
     }
 
-    function parseId(url) {
-        if (!url) return null;
-        const match = url.match(/(?:youtu\.be\/|v\/|embed\/|shorts\/|watch\?v=|&v=)([^#&?]*)/);
-        return (match && match[1].length === 11) ? match[1] : (url.length === 11 ? url : null);
-    }
-
-    function initVideo(forceId = null, forceLive = false) {
-        const id = forceId || currentId || parseId(els.input.value);
-        if (!id) {
-            if(els.input.value.trim() !== "") showToast("Invalid URL or ID");
-            return;
-        }
+    function initPlayer(id, isLiveMode = false) {
+        if (player) player.destroy();
         currentId = id;
-
-        let startTime = 0;
-        const historyEntry = db.history[id] || {};
-        if (els.settings.start.value) {
-            startTime = parseInt(els.settings.start.value);
-        } else if (historyEntry.time > 10) {
-            startTime = Math.floor(historyEntry.time);
-        }
-
-        if (player) {
-            player.destroy();
-            clearInterval(saveTimer);
-        }
-
-        const isLive = isLiveMode || forceLive;
-        if (isLive) {
-            db.liveMode = { id: id, time: startTime };
-            localStorage.setItem(STATE_KEY, JSON.stringify(db));
-        }
-
-        const vars = {
-            playsinline: 1,
-            rel: 0,
-            fs: isLive ? 0 : 1,
-            start: startTime,
-            controls: isLive ? 0 : (els.settings.controls.checked ? 1 : 0),
-            modestbranding: els.settings.ui.checked ? 1 : 0,
-            loop: els.settings.loop.checked ? 1 : 0,
-            disablekb: isLive ? 1 : 0,
-            iv_load_policy: 3,
-            cc_load_policy: 0,
-        };
-        if (vars.loop) vars.playlist = id;
+        
+        const startTime = (db.history[id]?.time || 0);
 
         player = new YT.Player('player', {
             videoId: id,
-            width: '100%', height: '100%',
-            playerVars: vars,
+            playerVars: {
+                autoplay: 1,
+                controls: isLiveMode ? 0 : 1,
+                disablekb: isLiveMode ? 1 : 0,
+                modestbranding: 1,
+                rel: 0,
+                start: Math.floor(startTime)
+            },
             events: {
-                'onReady': onPlayerReady,
-                'onStateChange': onPlayerStateChange,
-                'onError': (e) => showToast(`Error ${e.data}`)
+                'onReady': (e) => {
+                    e.target.playVideo();
+                    if (isLiveMode) document.body.classList.add('live-active');
+                },
+                'onStateChange': onPlayerStateChange
             }
         });
-
-        if (!forceId) els.input.value = "";
         renderHistory();
     }
 
-    function onPlayerReady(e) {
-        if (isLiveMode) {
-            e.target.setPlaybackRate(1);
-            e.target.playVideo();
-            els.liveOverlay.classList.add('visible');
-            // Request browser fullscreen for the iframe
-            const iframe = player.getIframe();
-            if (iframe.requestFullscreen) {
-                iframe.requestFullscreen().catch(() => {});
-            } else if (iframe.webkitRequestFullscreen) {
-                iframe.webkitRequestFullscreen();
-            } else if (iframe.mozRequestFullScreen) {
-                iframe.mozRequestFullScreen();
-            } else if (iframe.msRequestFullscreen) {
-                iframe.msRequestFullscreen();
-            }
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            startHeartbeat();
         } else {
-            if (els.settings.auto.checked) {
-                if (els.settings.mute.checked) e.target.mute();
-                e.target.playVideo();
-            }
-            e.target.setPlaybackRate(currentSpeed);
-            els.liveOverlay.classList.remove('visible');
+            stopHeartbeat();
+        }
+
+        // Auto-Unlock when finished
+        if (event.data === YT.PlayerState.ENDED && db.isLive) {
+            unlockLiveMode();
         }
     }
 
-    function onPlayerStateChange(e) {
-        if (e.data === YT.PlayerState.PLAYING) {
-            startSaving();
-            if (isLiveMode && player.getDuration() - player.getCurrentTime() < 10) {
-                setTimeout(exitLiveMode, 5000);
+    function startHeartbeat() {
+        clearInterval(saveInterval);
+        saveInterval = setInterval(() => {
+            if (player && player.getCurrentTime) {
+                const time = player.getCurrentTime();
+                const dur = player.getDuration();
+                if (time > 0) {
+                    db.history[currentId] = { time, dur, thumb: `https://img.youtube.com/vi/${currentId}/default.jpg` };
+                    saveDb();
+                }
             }
-        } else if (e.data === YT.PlayerState.ENDED && isLiveMode) {
-            exitLiveMode();
-        } else {
-            clearInterval(saveTimer);
+        }, 1000); // 1-second heartbeat
+    }
+
+    function stopHeartbeat() { clearInterval(saveInterval); }
+
+    function startLiveSession(id) {
+        db.isLive = true;
+        db.activeLiveId = id;
+        saveDb();
+        initPlayer(id, true);
+        showToast("LIVE MODE: ON");
+    }
+
+    function unlockLiveMode() {
+        db.isLive = false;
+        db.activeLiveId = null;
+        saveDb();
+        document.body.classList.remove('live-active');
+        showToast("Class Complete! Unlocked.");
+        initPlayer(currentId, false); // Reload with controls
+    }
+
+    // Anti-Cheat: Tab Focus Logic
+    window.addEventListener('blur', () => {
+        if (db.isLive && player && player.pauseVideo) {
+            player.pauseVideo();
+            document.getElementById('focusWarning').style.display = 'flex';
         }
-    }
+    });
 
-    function startSaving() {
-        clearInterval(saveTimer);
-        saveTimer = setInterval(() => {
-            if (!player || !player.getCurrentTime) return;
-            const t = player.getCurrentTime();
-            const d = player.getDuration();
-            if (t < 1 && d > 0) return;
-            db.history[currentId] = { id: currentId, time: t, duration: d, ts: Date.now() };
-            if (isLiveMode) db.liveMode.time = t;
-            persist();
-        }, 3000);
-    }
+    window.addEventListener('focus', () => {
+        document.getElementById('focusWarning').style.display = 'none';
+        if (db.isLive && player && player.playVideo) {
+            player.playVideo();
+        }
+    });
 
-    function persist() {
-        localStorage.setItem(STATE_KEY, JSON.stringify(db));
-    }
+    // Keyboard Lock
+    window.addEventListener('keydown', (e) => {
+        if (db.isLive) {
+            const forbidden = [' ', 'ArrowLeft', 'ArrowRight', 'j', 'k', 'l', 'f', 'm'];
+            if (forbidden.includes(e.key.toLowerCase())) {
+                e.preventDefault();
+                showToast("Action Blocked in Live Mode");
+            }
+        }
+    }, true);
 
-    function exitLiveMode() {
-        document.body.classList.remove('live-mode');
-        els.liveOverlay.classList.remove('visible');
-        isLiveMode = false;
-        db.liveMode = null;
-        persist();
-        showToast("Live Class Ended – Controls Restored");
-        if (document.exitFullscreen) document.exitFullscreen();
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-        else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
-        else if (document.msExitFullscreen) document.msExitFullscreen();
-        initVideo(currentId);
-    }
+    // Prevent closing tab
+    window.onbeforeunload = function() {
+        if (db.isLive) return "You are in a live class! Progress will be saved, but you must finish it.";
+    };
 
-    // Rest of the functions (fmtTime, renderHistory, etc.) remain the same...
-    function fmtTime(s) {
-        if (!s) return "0:00";
-        const date = new Date(0); date.setSeconds(s);
-        return date.toISOString().substr(11, 8).replace(/^00:/, '').replace(/^0/, '');
-    }
+    // UI Listeners
+    document.getElementById('loadBtn').onclick = () => {
+        const val = document.getElementById('urlInput').value;
+        const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : (val.length === 11 ? val : null);
+        if (id) initPlayer(id);
+        else alert("Invalid ID");
+    };
+
+    document.getElementById('liveBtn').onclick = () => {
+        if (!currentId) return alert("Load a video first");
+        if (confirm("START LIVE CLASS?\n- No seeking\n- No skipping\n- Pauses if you switch tabs")) {
+            startLiveSession(currentId);
+        }
+    };
 
     function renderHistory() {
-        const list = els.list;
-        const query = els.search.value.toLowerCase();
+        const list = document.getElementById('historyList');
         list.innerHTML = '';
-
-        const sorted = Object.values(db.history)
-            .filter(item => item.id.toLowerCase().includes(query))
-            .sort((a, b) => b.ts - a.ts);
-
-        if (sorted.length === 0) {
-            list.innerHTML = '<li style="padding:20px; text-align:center; color:var(--text-dim)">No history</li>';
-            return;
-        }
-
-        sorted.forEach(item => {
-            const pct = item.duration ? (item.time / item.duration) * 100 : 0;
-            const li = document.createElement('li');
-            li.className = `history-item ${currentId === item.id ? 'active' : ''}`;
-            li.onclick = () => initVideo(item.id);
-            li.innerHTML = `
-                <div class="thumb">
-                    <img src="https://i.ytimg.com/vi/${item.id}/mqdefault.jpg" 
-                         onerror="this.src='https://i.ytimg.com/vi/${item.id}/default.jpg'" loading="lazy">
-                    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        for (let id in db.history) {
+            const item = db.history[id];
+            const div = document.createElement('div');
+            div.className = 'hist-item';
+            div.innerHTML = `
+                <img src="${item.thumb}" class="hist-thumb">
+                <div>
+                    <b>${id}</b><br>
+                    <small>${Math.floor(item.time)} / ${Math.floor(item.dur)}s</small>
                 </div>
-                <div class="info">
-                    <div class="title">${item.id}</div>
-                    <div class="meta">${fmtTime(item.time)} / ${fmtTime(item.duration)}</div>
-                </div>
-                <button class="del-btn" onclick="delHistory(event, '${item.id}')">✕</button>
             `;
-            list.appendChild(li);
-        });
-    }
-
-    function delHistory(e, id) {
-        e.stopPropagation();
-        delete db.history[id];
-        if (db.liveMode && db.liveMode.id === id) db.liveMode = null;
-        persist();
-        renderHistory();
-    }
-
-    function clearHistory() {
-        if(confirm("Clear all history?")) {
-            db.history = {};
-            persist();
-            renderHistory();
+            div.onclick = () => !db.isLive && initPlayer(id);
+            list.appendChild(div);
         }
     }
 
-    function showToast(msg) {
+    function showToast(m) {
         const t = document.getElementById('toast');
-        t.innerText = msg;
-        t.classList.add('visible');
-        setTimeout(() => t.classList.remove('visible'), 3000);
+        t.innerText = m;
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 3000);
     }
-
-    function updateProgressVisibility() {
-        els.historyWrapper.classList.toggle('no-progress', !els.settings.progress.checked);
-    }
-
-    // Event Listeners (same as before)
-    document.getElementById('playBtn').onclick = () => {
-        const id = parseId(els.input.value);
-        if(id) initVideo(id);
-        else showToast("Please paste a valid URL");
-    };
-
-    els.input.addEventListener('keypress', e => {
-        if (e.key === 'Enter') {
-            const id = parseId(els.input.value);
-            if(id) initVideo(id);
-        }
-    });
-
-    els.applyBtn.onclick = () => {
-        if(currentId) {
-            initVideo(currentId);
-            showToast("Settings applied");
-        }
-    };
-
-    els.liveBtn.onclick = () => {
-        if (!currentId) {
-            showToast("Load a video first");
-            return;
-        }
-        isLiveMode = true;
-        document.body.classList.add('live-mode');
-        els.liveOverlay.classList.add('visible');
-        initVideo(currentId, true);
-        showToast("Live Mode Activated – STRICT MODE");
-    };
-
-    els.pipBtn.onclick = async () => {
-        if (player && player.getIframe) {
-            try {
-                await player.getIframe().requestPictureInPicture();
-            } catch(e) { showToast("PiP not supported"); }
-        }
-    };
-
-    document.querySelectorAll('.speed-btn').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentSpeed = parseFloat(btn.dataset.speed);
-            if (player) player.setPlaybackRate(currentSpeed);
-        };
-    });
-
-    els.search.oninput = renderHistory;
-    els.settings.progress.onchange = updateProgressVisibility;
-
-    // Emergency exit
-    document.addEventListener('keydown', e => {
-        if (isLiveMode && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'l') {
-            if (confirm("Emergency exit Live Mode?")) {
-                exitLiveMode();
-            }
-        }
-        if (e.key.toLowerCase() === 't' && !isLiveMode && document.activeElement.tagName !== 'INPUT') {
-            toggleTheatre();
-        }
-    });
-
-    let isTheatre = false;
-    function toggleTheatre() {
-        isTheatre = !isTheatre;
-        els.body.classList.toggle('theatre-mode', isTheatre);
-        els.theatreBtn.innerText = isTheatre ? "Exit Theatre [T]" : "Theatre [T]";
-    }
-    els.theatreBtn.onclick = toggleTheatre;
-
-    document.oncontextmenu = e => isLiveMode ? e.preventDefault() : true;
 
     renderHistory();
 </script>
