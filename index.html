@@ -3,395 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniPlayer Pro: Continue Watching</title>
+    <title>OmniPlayer Ultimate v7.1 (Live Lockdown)</title>
     <style>
         :root {
-            --primary: #ff0000;
-            --bg: #f9f9f9;
-            --surface: #ffffff;
-            --text: #333333;
-            --border: #e0e0e0;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --radius: 12px;
-            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            --prog-bar-bg: #ddd;
-            --prog-bar-fill: #ff0000;
-        }
-
-        [data-theme="dark"] {
-            --bg: #0f0f0f;
-            --surface: #1e1e1e;
-            --text: #f0f0f0;
-            --border: #333333;
-            --prog-bar-bg: #444;
+            --primary: #ff0033;
+            --primary-glow: rgba(255, 0, 51, 0.4);
+            --bg: #0a0a0c;
+            --surface: #16161a;
+            --surface-hover: #1f1f26;
+            --text: #ffffff;
+            --text-dim: #9494a5;
+            --border: #2d2d3a;
+            --radius: 16px;
+            --font: 'Inter', system-ui, sans-serif;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * { box-sizing: border-box; outline: none; }
-        body { margin: 0; padding: 0; font-family: var(--font); background: var(--bg); color: var(--text); transition: background 0.3s, color 0.3s; }
-        
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 1fr 300px; gap: 20px; min-height: 100vh; }
-        
-        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
-
-        header { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h1 { margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
-        h1 span { color: var(--primary); }
-        
-        .theme-toggle { background: none; border: none; cursor: pointer; font-size: 1.5rem; padding: 5px; }
-
-        .player-section { display: flex; flex-direction: column; gap: 20px; }
-        
-        /* Video Area */
-        .video-wrapper {
-            position: relative; padding-bottom: 56.25%; height: 0; background: #000;
-            border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+        body { 
+            margin: 0; background: var(--bg); color: var(--text); 
+            font-family: var(--font); height: 100vh; overflow: hidden; 
         }
-        
-        /* The div that YT API replaces */
-        #player { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
-        /* Input Area */
-        .input-group { display: flex; gap: 10px; background: var(--surface); padding: 15px; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); }
-        .url-input { flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
-        .btn { padding: 0 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; background: var(--primary); }
-        .btn:hover { filter: brightness(1.1); }
-        .btn-sec { background: var(--border); color: var(--text); }
-        
-        /* Sidebar */
-        .sidebar { display: flex; flex-direction: column; gap: 20px; }
-        .panel { background: var(--surface); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); box-shadow: var(--shadow); }
-        .panel h3 { margin: 0 0 15px 0; font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; justify-content: space-between; }
+        .app {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            grid-template-rows: 64px 1fr;
+            height: 100vh;
+            transition: all 0.4s var(--ease);
+        }
 
-        /* Settings Grid */
+        header {
+            grid-column: 1 / -1;
+            background: rgba(10, 10, 12, 0.8);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; z-index: 100; backdrop-filter: blur(12px);
+        }
+        .logo { font-weight: 800; font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+        .logo span { color: var(--primary); text-shadow: 0 0 15px var(--primary-glow); }
+
+        .stage {
+            grid-column: 1; grid-row: 2;
+            padding: 40px; display: flex; flex-direction: column; 
+            align-items: center; overflow-y: auto; position: relative;
+        }
+
+        .video-container {
+            width: 100%; max-width: 1000px;
+            aspect-ratio: 16/9; background: #000;
+            border-radius: var(--radius);
+            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.7);
+            overflow: hidden; position: relative;
+            border: 1px solid var(--border);
+        }
+        #player { width: 100%; height: 100%; }
+
+        /* লাইভ মোড স্টাইল */
+        .live-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 999; display: none; cursor: not-allowed;
+            background: rgba(0,0,0,0); 
+        }
+        .live-indicator {
+            position: absolute; top: 20px; left: 20px;
+            background: var(--primary); color: white;
+            padding: 6px 14px; border-radius: 6px; font-weight: 900;
+            font-size: 12px; display: flex; align-items: center; gap: 8px;
+            animation: pulse 1.5s infinite; pointer-events: none;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .controls-area {
+            margin-top: 30px; width: 100%; max-width: 700px;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .input-group { display: flex; gap: 10px; }
+        .url-input {
+            flex: 1; background: var(--surface); border: 1px solid var(--border);
+            color: var(--text); padding: 16px 20px; border-radius: 12px;
+            font-size: 1rem; transition: 0.3s;
+        }
+
+        .btn {
+            background: var(--surface); color: var(--text); border: 1px solid var(--border);
+            padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600;
+            transition: 0.2s; display: flex; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: var(--primary); border: none; padding: 0 30px; }
+        
+        /* সাইডবার */
+        .sidebar {
+            grid-column: 2; grid-row: 2; background: var(--surface);
+            border-left: 1px solid var(--border); display: flex; flex-direction: column;
+        }
+        .panel { padding: 24px; border-bottom: 1px solid var(--border); }
         .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .setting-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
-        .setting-item.full { grid-column: 1 / -1; }
-        input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
-        input[type="number"] { width: 100%; padding: 5px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; }
+        .toggle-card {
+            background: var(--bg); border: 1px solid var(--border);
+            padding: 10px; border-radius: 8px; display: flex; align-items: center; 
+            gap: 8px; cursor: pointer; font-size: 0.8rem;
+        }
 
-        /* History */
-        .history-list { list-style: none; padding: 0; margin: 0; max-height: 400px; overflow-y: auto; }
-        .history-item { padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; gap: 10px; align-items: center; transition: 0.2s; position: relative; }
-        .history-item:hover { background: var(--bg); }
-        .history-thumb { width: 80px; height: 60px; background: #000; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
-        .history-info { flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
-        .history-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
-        .history-meta { font-size: 0.75rem; color: #888; display: flex; justify-content: space-between; }
-        .history-progress-bg { height: 4px; background: var(--prog-bar-bg); width: 100%; margin-top: 6px; border-radius: 2px; overflow: hidden; }
-        .history-progress-fill { height: 100%; background: var(--prog-bar-fill); width: 0%; transition: width 0.3s; }
-        .btn-del { color: #ff4444; font-size: 1.2rem; padding: 0 5px; }
+        .history-list { list-style: none; padding: 0; margin: 0; flex: 1; overflow-y: auto; }
+        .history-item {
+            display: flex; gap: 15px; padding: 15px 24px; border-bottom: 1px solid var(--border);
+            cursor: pointer; transition: 0.2s;
+        }
+        .history-item.active { background: rgba(255,0,51,0.05); border-left: 4px solid var(--primary); }
 
-        /* Status Toast */
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 999; }
-        .toast.show { opacity: 1; bottom: 40px; }
-        
-        /* Live Indicator */
-        .watching-now { border-left: 4px solid var(--primary); background: var(--bg); }
+        body.live-active .live-overlay { display: block; }
+        body.live-active .url-input, body.live-active .btn-primary { opacity: 0.5; pointer-events: none; }
+
+        .toast {
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background: white; color: black; padding: 12px 24px; border-radius: 50px;
+            font-weight: 700; opacity: 0; pointer-events: none; transition: 0.4s; z-index: 2000;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="app">
     <header>
-        <h1><span>▶</span> OmniPlayer Pro</h1>
-        <button class="theme-toggle" id="themeBtn">🌙</button>
+        <div class="logo"><span>◆</span> OmniPlayer </div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn" id="liveToggleBtn" style="border-color: var(--primary); color: var(--primary);">Live Mode</button>
+            <button class="btn" id="theatreBtn">Theatre [T]</button>
+        </div>
     </header>
 
-    <main class="player-section">
-        <div class="video-wrapper">
+    <main class="stage">
+        <div class="video-container">
             <div id="player"></div>
+            <div class="live-overlay" id="liveOverlay">
+                <div class="live-indicator">● LIVE CLASS LOCKDOWN</div>
+            </div>
         </div>
-
-        <div class="input-group">
-            <input type="text" id="urlInput" class="url-input" placeholder="Paste YouTube Link or ID">
-            <button class="btn" id="loadBtn">Play</button>
-        </div>
-        
-        <div class="panel">
-            <h3>Now Playing Info</h3>
-            <div id="statusDisplay" style="font-size: 0.9rem; color: #888;">Waiting for video...</div>
+        <div class="controls-area">
+            <div class="input-group">
+                <input type="text" id="urlInput" class="url-input" placeholder="YouTube Link or ID...">
+                <button class="btn btn-primary" id="playBtn">Play</button>
+            </div>
         </div>
     </main>
 
     <aside class="sidebar">
         <div class="panel">
-            <h3>Settings <button class="btn btn-sec" style="padding:2px 8px; font-size:0.7rem;" onclick="resetDefaults()">Reset</button></h3>
+            <h3>Configuration</h3>
             <div class="settings-grid">
-                <div class="setting-item"><input type="checkbox" id="autoplay" checked><label for="autoplay">Autoplay</label></div>
-                <div class="setting-item"><input type="checkbox" id="loop"><label for="loop">Loop</label></div>
-                <div class="setting-item"><input type="checkbox" id="controls" checked><label for="controls">Controls</label></div>
-                <div class="setting-item"><input type="checkbox" id="modest"><label for="modest">Clean UI</label></div>
-                <div class="setting-item full">
-                    <label>Force Start (Seconds)</label>
-                    <input type="number" id="startOverride" placeholder="Leave empty to resume history">
-                </div>
+                <label class="toggle-card"><input type="checkbox" id="cfg-auto" checked> Autoplay</label>
+                <label class="toggle-card"><input type="checkbox" id="cfg-mute"> Mute</label>
             </div>
-            <button class="btn btn-sec" style="width:100%; margin-top:10px;" id="applyBtn">Apply Settings (Reload)</button>
         </div>
-
-        <div class="panel">
-            <h3>History <button class="btn btn-sec" style="padding:2px 8px; font-size:0.7rem;" onclick="wipeHistory()">Clear</button></h3>
-            <ul class="history-list" id="historyList"></ul>
-        </div>
+        <ul class="history-list" id="historyList"></ul>
     </aside>
 </div>
 
-<div class="toast" id="toast">Message</div>
+<div class="toast" id="toast"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
-
 <script>
-    // --- Global State ---
-    let player;
-    let saveInterval;
-    let currentState = {
-        videoId: '',
-        history: JSON.parse(localStorage.getItem('yt_omni_pro_history')) || {}
-    };
+    const DB_KEY = 'omni_v7_data';
+    let db = JSON.parse(localStorage.getItem(DB_KEY)) || { history: {}, lastVideo: null, liveMode: false, liveVideoId: null };
+    let player = null;
+    let saveInterval = null;
+    let currentVideoId = null;
 
-    const els = {
-        input: document.getElementById('urlInput'),
-        status: document.getElementById('statusDisplay'),
-        historyList: document.getElementById('historyList'),
-        settings: {
-            autoplay: document.getElementById('autoplay'),
-            loop: document.getElementById('loop'),
-            controls: document.getElementById('controls'),
-            modest: document.getElementById('modest'),
-            start: document.getElementById('startOverride')
-        }
-    };
-
-    // --- API Ready ---
     function onYouTubeIframeAPIReady() {
-        // Placeholder player, waiting for user input
-        showToast("Player API Ready");
+        if (db.liveMode && db.liveVideoId) {
+            activateLiveModeUI(true);
+            loadVideo(db.liveVideoId);
+        } else if (db.lastVideo) {
+            loadVideo(db.lastVideo);
+        }
     }
 
-    // --- Core Player Logic ---
-    function loadVideo(forceId = null) {
-        let inputVal = els.input.value.trim();
-        let videoId = forceId || extractVideoId(inputVal);
+    function parseId(input) {
+        const match = input.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|\/embed\/|\/v\/))([^?&]+)/);
+        return match ? match[1] : (input.length === 11 ? input : null);
+    }
 
-        if (!videoId) {
-            showToast("Invalid Video ID");
-            return;
-        }
+    function loadVideo(id) {
+        if (!id) return;
+        currentVideoId = id;
+        db.lastVideo = id;
+        saveDb();
 
-        currentState.videoId = videoId;
-
-        // 1. Determine Start Time
-        let startTime = 0;
-        
-        // Priority 1: User forced start time setting
-        if (els.settings.start.value) {
-            startTime = parseInt(els.settings.start.value);
-            els.status.innerHTML = `Starting at forced time: ${formatTime(startTime)}`;
-        } 
-        // Priority 2: Resume from history
-        else if (currentState.history[videoId] && currentState.history[videoId].time > 5) {
-            // >5 check prevents resuming intro logos
-            startTime = Math.floor(currentState.history[videoId].time);
-            els.status.innerHTML = `Resuming from ${formatTime(startTime)}`;
-        } else {
-            els.status.innerHTML = `Starting from beginning`;
-        }
-
-        // 2. Destroy old player if exists
-        if (player) {
-            player.destroy();
-            clearInterval(saveInterval);
-        }
-
-        // 3. Create new player
-        const playerVars = {
-            'playsinline': 1,
-            'controls': els.settings.controls.checked ? 1 : 0,
-            'rel': 0,
-            'fs': 1,
-            'modestbranding': els.settings.modest.checked ? 1 : 0,
-            'start': startTime,
-            'loop': els.settings.loop.checked ? 1 : 0,
-        };
-
-        // If loop is on, playlist param is needed
-        if (els.settings.loop.checked) {
-            playerVars['playlist'] = videoId;
-        }
+        let startPos = (db.history[id]) ? Math.floor(db.history[id].position) : 0;
+        if (player) { player.destroy(); clearInterval(saveInterval); }
 
         player = new YT.Player('player', {
-            height: '100%',
-            width: '100%',
-            videoId: videoId,
-            playerVars: playerVars,
+            videoId: id,
+            playerVars: {
+                autoplay: 1,
+                controls: db.liveMode ? 0 : 1,
+                start: startPos,
+                modestbranding: 1
+            },
             events: {
-                'onReady': onPlayerReady,
-                'onStateChange': onPlayerStateChange,
-                'onError': (e) => showToast("Video Error: " + e.data)
-            }
-        });
-
-        updateHistoryEntry(videoId, startTime); // Initial save
-        els.input.value = `https://youtu.be/${videoId}`;
-    }
-
-    function onPlayerReady(event) {
-        if (els.settings.autoplay.checked) {
-            event.target.playVideo();
-        }
-        
-        // Start the save loop
-        startSavingProgress();
-    }
-
-    function onPlayerStateChange(event) {
-        // 1 = Playing
-        if (event.data == YT.PlayerState.PLAYING) {
-            startSavingProgress();
-        } else {
-            clearInterval(saveInterval);
-        }
-    }
-
-    // --- Save Logic ---
-    function startSavingProgress() {
-        clearInterval(saveInterval);
-        saveInterval = setInterval(() => {
-            if (player && player.getCurrentTime) {
-                const currentTime = player.getCurrentTime();
-                const duration = player.getDuration();
-                
-                if (currentTime > 0 && duration > 0) {
-                    saveToHistory(currentState.videoId, currentTime, duration);
+                'onReady': () => { startTracking(); },
+                'onStateChange': (e) => {
+                    if (e.data === YT.PlayerState.ENDED && db.liveMode) exitLiveMode();
                 }
             }
-        }, 5000); // Save every 5 seconds
-    }
-
-    function saveToHistory(id, time, duration) {
-        if (!currentState.history[id]) currentState.history[id] = {};
-        
-        currentState.history[id] = {
-            id: id,
-            time: time,
-            duration: duration,
-            lastPlayed: Date.now()
-        };
-        
-        localStorage.setItem('yt_omni_pro_history', JSON.stringify(currentState.history));
+        });
         renderHistory();
     }
 
-    // --- Helper Logic ---
-    function extractVideoId(url) {
-        if(!url) return null;
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-        const match = url.match(regExp);
-        if (match && match[2].length == 11) return match[2];
-        if (url.length === 11) return url; 
-        return null;
+    function startTracking() {
+        clearInterval(saveInterval);
+        saveInterval = setInterval(() => {
+            if (player?.getCurrentTime) {
+                const pos = player.getCurrentTime();
+                const dur = player.getDuration();
+                if (dur > 0) {
+                    db.history[currentVideoId] = { id: currentVideoId, position: pos, duration: dur, updated: Date.now() };
+                    saveDb();
+                    renderHistory();
+                }
+            }
+        }, 3000);
     }
 
-    function formatTime(seconds) {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = Math.floor(seconds % 60);
-        return (h > 0 ? h + ":" : "") + (m < 10 && h > 0 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
-    }
-
-    // --- UI/History Rendering ---
-    function renderHistory() {
-        const list = els.historyList;
-        list.innerHTML = '';
-
-        // Convert object to array and sort by lastPlayed (desc)
-        const sorted = Object.values(currentState.history).sort((a, b) => b.lastPlayed - a.lastPlayed);
-
-        if (sorted.length === 0) {
-            list.innerHTML = '<li style="padding:10px;text-align:center;color:#888">No history yet.</li>';
-            return;
+    function toggleLiveMode() {
+        if (!currentVideoId) return showToast("Play a video first");
+        if (!db.liveMode) {
+            if (confirm("Live Mode will block ALL controls (Keyboard + Mouse). Continue?")) {
+                db.liveMode = true;
+                db.liveVideoId = currentVideoId;
+                saveDb();
+                activateLiveModeUI(true);
+                loadVideo(currentVideoId);
+            }
+        } else {
+            showToast("Cannot exit until class ends");
         }
+    }
 
-        sorted.forEach(item => {
-            const percent = item.duration ? (item.time / item.duration) * 100 : 0;
+    function exitLiveMode() {
+        db.liveMode = false;
+        db.liveVideoId = null;
+        saveDb();
+        activateLiveModeUI(false);
+        loadVideo(currentVideoId);
+        showToast("Class Completed!");
+    }
+
+    function activateLiveModeUI(active) {
+        document.body.classList.toggle('live-active', active);
+        document.getElementById('liveToggleBtn').innerText = active ? "LIVE ACTIVE" : "Live Mode";
+    }
+
+    // --- Keyboard Interceptor ---
+    document.addEventListener('keydown', (e) => {
+        if (db.liveMode) {
+            const blocked = [' ', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'j', 'k', 'l', 'f', 'm', '0','1','2','3','4','5','6','7','8','9'];
+            if (blocked.includes(e.key.toLowerCase())) {
+                e.preventDefault();
+                showToast("Locked: Seeking disabled in Live Mode");
+            }
+        }
+    }, true);
+
+    function saveDb() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+    function showToast(m) { const t=document.getElementById('toast'); t.innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+    
+    function renderHistory() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = '';
+        Object.values(db.history).sort((a,b)=>b.updated-a.updated).forEach(item => {
             const li = document.createElement('li');
-            li.className = 'history-item';
-            if(item.id === currentState.videoId) li.classList.add('watching-now');
-            
-            li.onclick = () => loadVideo(item.id);
-
-            li.innerHTML = `
-                <img src="https://img.youtube.com/vi/${item.id}/mqdefault.jpg" class="history-thumb">
-                <div class="history-info">
-                    <div class="history-title">Video ID: ${item.id}</div>
-                    <div class="history-meta">
-                        <span>${formatTime(item.time)} / ${formatTime(item.duration || 0)}</span>
-                        <span>${new Date(item.lastPlayed).toLocaleDateString()}</span>
-                    </div>
-                    <div class="history-progress-bg">
-                        <div class="history-progress-fill" style="width: ${percent}%"></div>
-                    </div>
-                </div>
-                <div class="btn-del" onclick="deleteHistory(event, '${item.id}')">&times;</div>
-            `;
+            li.className = `history-item ${currentVideoId === item.id ? 'active' : ''}`;
+            li.innerHTML = `<div>${item.id}</div><small>${Math.floor(item.position/60)}m / ${Math.floor(item.duration/60)}m</small>`;
+            li.onclick = () => !db.liveMode && loadVideo(item.id);
             list.appendChild(li);
         });
     }
 
-    function updateHistoryEntry(id, startTime) {
-        // Just ensures the list highlights the current video immediately on load
-        saveToHistory(id, startTime, 0); 
-    }
-
-    function deleteHistory(e, id) {
-        e.stopPropagation();
-        delete currentState.history[id];
-        localStorage.setItem('yt_omni_pro_history', JSON.stringify(currentState.history));
-        renderHistory();
-    }
-
-    function wipeHistory() {
-        if(confirm("Delete all history?")) {
-            currentState.history = {};
-            localStorage.removeItem('yt_omni_pro_history');
-            renderHistory();
-        }
-    }
-
-    // --- Listeners ---
-    document.getElementById('loadBtn').addEventListener('click', () => loadVideo());
-    document.getElementById('applyBtn').addEventListener('click', () => {
-        if(currentState.videoId) loadVideo(currentState.videoId);
-    });
-    
-    document.getElementById('themeBtn').addEventListener('click', () => {
-        const isDark = document.body.getAttribute('data-theme') === 'dark';
-        document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    });
-
-    els.input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') loadVideo();
-    });
-
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3000);
-    }
-
-    function resetDefaults() {
-        els.settings.autoplay.checked = true;
-        els.settings.controls.checked = true;
-        els.settings.loop.checked = false;
-        els.settings.modest.checked = false;
-        els.settings.start.value = '';
-        showToast("Settings Reset");
-    }
-
-    // Initial Render
-    renderHistory();
+    document.getElementById('playBtn').onclick = () => {
+        const id = parseId(document.getElementById('urlInput').value);
+        if (id) loadVideo(id);
+    };
+    document.getElementById('liveToggleBtn').onclick = toggleLiveMode;
 </script>
-
 </body>
 </html>
